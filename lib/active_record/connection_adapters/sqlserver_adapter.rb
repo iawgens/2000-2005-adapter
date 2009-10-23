@@ -286,7 +286,6 @@ module ActiveRecord
       def native_binary_database_type
         @@native_binary_database_type || ((sqlserver_2005? || sqlserver_2008?) ? 'varbinary(max)' : 'image')
       end
-      
       # QUOTING ==================================================#
       
       def quote(value, column = nil)
@@ -294,6 +293,9 @@ module ActiveRecord
         when String, ActiveSupport::Multibyte::Chars
           if column && column.type == :binary
             column.class.string_to_binary(value)
+          # The problem with quoting it here is when issuing query against a unicode
+          # column, the string is not prefixed with 'N' and thus the database
+          # was not able to return the correct results
           elsif column && column.respond_to?(:is_utf8?) && column.is_utf8?
             quoted_utf8_value(value)
           else
@@ -335,6 +337,15 @@ module ActiveRecord
       
       def quoted_utf8_value(value)
         "N'#{quote_string(value)}'"
+      end
+      
+      # When encoding = utf8, MSSQL require prefix 'N' for string value in order
+      # to get the proper result
+      def quoted_string_prefix()
+        # TODO: What if connecting to existing database that has mixed datatypes.
+        # This only support all or nothing, so when encoding is setup as utf-8,
+        # all datatype will be unicode
+        'N' if enable_default_unicode_types
       end
       
       # REFERENTIAL INTEGRITY ====================================#
