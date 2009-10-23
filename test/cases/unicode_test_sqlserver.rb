@@ -25,12 +25,13 @@ class UnicodeTestSqlserver < ActiveRecord::TestCase
     end
 
   end
-  
+
   context 'Testing unicode data' do
 
     setup do
-      @unicode_data = "\344\270\200\344\272\21434\344\272\224\345\205\255"
-      @encoded_unicode_data = "\344\270\200\344\272\21434\344\272\224\345\205\255".force_encoding('UTF-8') if ruby_19?
+      @unicode_data = "一二34五六"
+      @encoded_unicode_data = "一二34五六".force_encoding('UTF-8') if ruby_19?
+      @partial_unicode_data = "一二"
     end
 
     should 'insert into nvarchar field' do
@@ -42,9 +43,22 @@ class UnicodeTestSqlserver < ActiveRecord::TestCase
       assert data = SqlServerUnicode.create!(:nvarchar => @unicode_data)
       assert_equal @encoded_unicode_data, data.reload.nvarchar
     end if ruby_19?
+    
+    context 'querying unicode columns' do
+      
+      should 'return result with string conditions' do
+        assert data = SqlServerUnicode.create!(:nvarchar => @unicode_data)
+        assert_equal data.nvarchar, SqlServerUnicode.find(:first, :conditions => ["nvarchar LIKE ?","%#{@partial_unicode_data}%"]).nvarchar
+      end if ActiveRecord::ConnectionAdapters::SQLServerAdapter.enable_default_unicode_types
+      
+      should 'return result with hash conditions' do
+        assert data = SqlServerUnicode.create!(:nvarchar => @unicode_data)
+        assert_equal data.nvarchar, SqlServerUnicode.find(:first, :conditions => {:nvarchar => @unicode_data}).nvarchar
+      end if ActiveRecord::ConnectionAdapters::SQLServerAdapter.enable_default_unicode_types
+      
+    end
 
   end
-  
-  
-  
+
+
 end
