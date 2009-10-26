@@ -822,8 +822,8 @@ module ActiveRecord
       
       # DATABASE STATEMENTS ======================================
       
-      def select(sql, name = nil, ignore_special_columns = false)
-        repair_special_columns(sql) unless ignore_special_columns
+      def select(sql, name = nil, ignore_repairing_columns = false)
+        repair_columns(sql) unless ignore_repairing_columns
         fields, rows = raw_select(sql,name)
         rows.inject([]) do |results,row|
           row_hash = {}
@@ -1122,6 +1122,12 @@ module ActiveRecord
         columns(table_name).select(&:is_special?).map(&:name)
       end
       
+      # To get boolean columns for repairing boolean value that is not
+      # quoted properly
+      def boolean_columns(table_name)
+        columns(table_name).select {|col| col.type == :boolean}.map(&:name)
+      end
+      
       def repair_special_columns(sql)
         special_cols = special_columns(get_table_name(sql))
         for col in special_cols.to_a
@@ -1129,6 +1135,30 @@ module ActiveRecord
           sql.gsub!(/ORDER BY #{col.to_s}/i, '')
         end
         sql
+      end
+      
+      # Converting boolean columns for backward compatibility. E.g accepting is_boolean = true
+      # and (is_boolean)
+      def repair_boolean_columns(sql)
+        boolean_cols = boolean_columns(get_table_name(sql))
+        boolean_cols.each {|col|
+          #  convert (is_boolean_column) to (is_boolean_column) = 'true' if it's
+          #  not already (is_boolean = true)
+          #  Note: Must include \\3 because \\3 will match one character that's
+          #  not an '='
+          if !sql.gsub!(/((\.|\s|\()\[?#{col.to_s}\]?)(\s*\))(\s*[^=\s]|$)/i,"\\1 = 'true'\\3\\4")
+            
+            #  otherwise just convert is_boolean_column = true to is_boolean_column = 'true'
+            sql.gsub!(/((\.|\s|\()\[?#{col.to_s}\]?\s?=\s?)(\w+)/i,'\1\'\3\'')
+          end   
+        }
+            
+        sql
+      end
+      
+      def repair_columns(sql)
+        repair_special_columns(sql)
+        repair_boolean_columns(sql)
       end
             
     end #class SQLServerAdapter < AbstractAdapter
