@@ -1160,6 +1160,30 @@ module ActiveRecord
         repair_special_columns(sql)
         repair_boolean_columns(sql)
       end
+      
+      def repair_repeated_order(sql, order_sql)
+        unique_order_hash = {}
+          select_table_name = get_table_name(sql)
+          select_table_name.tr!('[]','') if select_table_name
+          orders_and_dirs_set = orders_and_dirs_set(order_sql)
+          unique_order_sql = orders_and_dirs_set.inject([]) do |array,order_dir|
+            ord, dir = order_dir
+            ord_tn_and_cn = ord.to_s.split('.').map{|o|o.tr('[]','')}
+            ord_table_name, ord_column_name = if ord_tn_and_cn.size > 1
+                                              ord_tn_and_cn
+                                            else
+                                              [nil, ord_tn_and_cn.first]
+                                            end
+            if (ord_table_name && ord_table_name == select_table_name && unique_order_hash[ord_column_name]) || unique_order_hash[ord_column_name]
+              array
+            else
+              unique_order_hash[ord_column_name] = true
+              array << "#{ord} #{dir}".strip
+            end
+          end.join(', ')
+          
+          sql << " ORDER BY #{unique_order_sql}"  
+      end
             
     end #class SQLServerAdapter < AbstractAdapter
     

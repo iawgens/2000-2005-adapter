@@ -1,7 +1,10 @@
 require 'cases/sqlserver_helper'
 require 'models/book'
+require 'models/post'
+require 'models/comment'
 
 class OffsetAndLimitTestSqlserver < ActiveRecord::TestCase
+  fixtures :posts, :comments 
   
   class Account < ActiveRecord::Base; end
   
@@ -99,6 +102,15 @@ class OffsetAndLimitTestSqlserver < ActiveRecord::TestCase
       assert_sql %r|\(SELECT TOP 1000000000 \* FROM \[people\] \)| do
         Person.all :limit => 5, :offset => 1
       end
+    end
+    
+    
+    context 'When default order is defined in associations ' do
+
+      should 'use the correct order when order condition is passed in finder' do
+        assert_equal [comments(:eager_sti_on_associations_s_comment2)], posts(:sti_comments).comments.find(:all,:limit => 1, :offset => 1, :order => "body desc")
+      end
+      
     end
     
   end
