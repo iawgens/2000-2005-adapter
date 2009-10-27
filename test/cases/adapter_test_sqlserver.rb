@@ -330,12 +330,17 @@ class AdapterTestSqlserver < ActiveRecord::TestCase
       @identity_insert_sql = "INSERT INTO [funny_jokes] ([id],[name]) VALUES(420,'Knock knock')"
       @identity_insert_sql_unquoted = "INSERT INTO funny_jokes (id, name) VALUES(420, 'Knock knock')"
       @identity_insert_sql_unordered = "INSERT INTO [funny_jokes] ([name],[id]) VALUES('Knock knock',420)"
+      @non_standard_identity_insert_sql = "INSERT INTO funny_jokes (id, name) VALUES(420, 'Knock knock')"
     end
     
     should 'return quoted table_name to #query_requires_identity_insert? when INSERT sql contains id column' do
       assert_equal '[funny_jokes]', @connection.send(:query_requires_identity_insert?,@identity_insert_sql)
       assert_equal '[funny_jokes]', @connection.send(:query_requires_identity_insert?,@identity_insert_sql_unquoted)
       assert_equal '[funny_jokes]', @connection.send(:query_requires_identity_insert?,@identity_insert_sql_unordered)
+    end
+    
+    should 'return quoted table_name to #query_requires_identity_insert? with non standard sql' do
+      assert_equal 'funny_jokes', @connection.send(:query_requires_identity_insert?,@non_standard_identity_insert_sql)
     end
     
     should 'return false to #query_requires_identity_insert? for normal SQL' do
