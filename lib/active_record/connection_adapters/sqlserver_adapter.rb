@@ -957,7 +957,8 @@ module ActiveRecord
         if insert_sql?(sql)
           table_name = get_table_name(sql)
           id_column = identity_column(table_name)
-          id_column && sql =~ /INSERT[^(]+\([^)]*\[#{id_column.name}\][^)]*\)/i ? table_name : false
+          # More lenient RegExp for optional [] in column names to support of sql script non MSSQL
+          id_column && sql =~ /INSERT[^(]+\([^)]*\b(#{id_column.name})\b,?[^)]*\)/i ? table_name : false
         else
           false
         end

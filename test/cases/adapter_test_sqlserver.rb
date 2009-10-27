@@ -328,10 +328,15 @@ class AdapterTestSqlserver < ActiveRecord::TestCase
     
     setup do
       @identity_insert_sql = "INSERT INTO [funny_jokes] ([id],[name]) VALUES(420,'Knock knock')"
+      @non_standard_identity_insert_sql = "INSERT INTO funny_jokes (id, name) VALUES(420, 'Knock knock')"
     end
     
     should 'return quoted table_name to #query_requires_identity_insert? when INSERT sql contains id_column' do
       assert_equal '[funny_jokes]', @connection.send(:query_requires_identity_insert?,@identity_insert_sql)
+    end
+    
+    should 'return quoted table_name to #query_requires_identity_insert? with non standard sql' do
+      assert_equal 'funny_jokes', @connection.send(:query_requires_identity_insert?,@non_standard_identity_insert_sql)
     end
     
     should 'return false to #query_requires_identity_insert? for normal SQL' do
