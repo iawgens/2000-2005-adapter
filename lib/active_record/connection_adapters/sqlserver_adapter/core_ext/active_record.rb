@@ -51,18 +51,11 @@ module ActiveRecord
 
           def add_limit_with_sqlserver_order_checking!(sql, options, scope = :auto)
             if connection.respond_to?(:sqlserver?)
-              scope = scope(:find) if :auto == scope
-              if scope
-                options = options.dup
-                scoped_order = scope[:order]
-                order = options[:order]
-                if order && scoped_order
-                  options[:order] = add_order_with_sqlserver_unique_checking!('', order, scope).gsub(/^ ORDER BY /,'')
-                elsif scoped_order
-                  options[:order] = scoped_order
-                end
-              end
+              options = options.dup 
+              order_sql = add_order_with_sqlserver_unique_checking!('', options[:order], scope)
+              options[:order] = order_sql.gsub(/^ ORDER BY /,'') unless order_sql.nil?
             end
+
             add_limit_without_sqlserver_order_checking!(sql, options, scope)
           end
 
@@ -71,26 +64,7 @@ module ActiveRecord
               order_sql = ''
               add_order_without_sqlserver_unique_checking!(order_sql, order, scope)
               unless order_sql.blank?
-                unique_order_hash = {}
-                select_table_name = connection.send(:get_table_name,sql)
-                select_table_name.tr!('[]','') if select_table_name
-                orders_and_dirs_set = connection.send(:orders_and_dirs_set,order_sql)
-                unique_order_sql = orders_and_dirs_set.inject([]) do |array,order_dir|
-                  ord, dir = order_dir
-                  ord_tn_and_cn = ord.to_s.split('.').map{|o|o.tr('[]','')}
-                  ord_table_name, ord_column_name = if ord_tn_and_cn.size > 1
-                                                      ord_tn_and_cn
-                                                    else
-                                                      [nil, ord_tn_and_cn.first]
-                                                    end
-                  if (ord_table_name && ord_table_name == select_table_name && unique_order_hash[ord_column_name]) || unique_order_hash[ord_column_name]
-                    array
-                  else
-                    unique_order_hash[ord_column_name] = true
-                    array << "#{ord} #{dir}".strip
-                  end
-                end.join(', ')
-                sql << " ORDER BY #{unique_order_sql}"
+                connection.send(:repair_repeated_order, sql, order_sql)
               end
             else
               add_order_without_sqlserver_unique_checking!(sql, order, scope)
