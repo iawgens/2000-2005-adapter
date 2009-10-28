@@ -662,12 +662,13 @@ module ActiveRecord
       end
       
       def change_column(table_name, column_name, type, options = {})
+        remove_default_constraint(table_name, column_name)
         sql_commands = []
         change_column_sql = "ALTER TABLE #{quote_table_name(table_name)} ALTER COLUMN #{quote_column_name(column_name)} #{type_to_sql(type, options[:limit], options[:precision], options[:scale])}"
         change_column_sql << " NOT NULL" if options[:null] == false
         sql_commands << change_column_sql
+
         if options_include_default?(options)
-          remove_default_constraint(table_name, column_name)
           sql_commands << "ALTER TABLE #{quote_table_name(table_name)} ADD CONSTRAINT #{default_name(table_name,column_name)} DEFAULT #{quote(options[:default])} FOR #{quote_column_name(column_name)}"
         end
         sql_commands.each { |c| do_execute(c) }

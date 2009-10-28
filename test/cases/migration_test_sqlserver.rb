@@ -30,6 +30,20 @@ class MigrationTestSqlserver < ActiveRecord::TestCase
     
   end
   
+  context 'For changing column' do
+    
+    should 'not raise exception when column contains default constraint' do
+      # TODO: make sure people's lock version contains default constraint
+      old_columns = Person.connection.columns(Person.table_name)
+      assert old_columns.find { |c| c.name == 'lock_version' and !c.default.nil?  }
+    
+      assert_nothing_raised { Person.connection.change_column 'people', 'lock_version', :string }
+      
+      new_columns = Person.connection.columns(Person.table_name)
+      assert new_columns.find { |c| c.name == 'lock_version' and c.type == :string }
+    end
+    
+  end
   
 end
 
