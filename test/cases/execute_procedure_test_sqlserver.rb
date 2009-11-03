@@ -21,10 +21,10 @@ class ExecuteProcedureTestSqlserver < ActiveRecord::TestCase
   end
   
   should 'quote bind vars correctly' do
-    assert_sql(/EXEC sp_tables '%sql_server%', NULL, NULL, NULL, 1/) do
+    assert_sql(/EXEC sp_tables N?'%sql_server%', NULL, NULL, NULL, 1/) do
       @klass.execute_procedure :sp_tables, '%sql_server%', nil, nil, nil, true
     end if sqlserver_2005? || sqlserver_2008?
-    assert_sql(/EXEC sp_tables '%sql_server%', NULL, NULL, NULL/) do
+    assert_sql(/EXEC sp_tables N?'%sql_server%', NULL, NULL, NULL/) do
       @klass.execute_procedure :sp_tables, '%sql_server%', nil, nil, nil
     end if sqlserver_2000?
   end
